@@ -15,9 +15,9 @@ export default function FormField({
 }: Props) {
   return (
     <label className="block">
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-medium text-white/70">{label}</span>
       <input
-        className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring"
+        className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-white outline-none placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}

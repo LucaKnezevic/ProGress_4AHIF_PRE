@@ -86,14 +86,14 @@ export default function TrainingsPage() {
 
   return (
     <Container>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <SectionTitle
           title="Trainingsdaten"
-          subtitle="Erfasse Übungen und verwalte sie (Create/Read/Update/Delete)."
+          subtitle="Übungen erfassen & verwalten"
         />
         <button
           onClick={openCreate}
-          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
+          className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition active:scale-95"
         >
           + Neu
         </button>
@@ -102,30 +102,36 @@ export default function TrainingsPage() {
       <div className="grid gap-3">
         {sorted.length === 0 ? (
           <Card>
-            <p className="text-sm text-gray-600">Noch keine Trainingsdaten vorhanden.</p>
+            <div className="py-6 text-center">
+              <p className="text-3xl mb-2">🏋️</p>
+              <p className="text-sm text-white/50">Noch keine Trainingsdaten vorhanden.</p>
+              <p className="text-xs text-white/30 mt-1">Tippe auf &quot;+ Neu&quot; um zu starten</p>
+            </div>
           </Card>
         ) : (
           sorted.map((it) => (
             <Card key={it.id}>
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3">
                 <div>
-                  <div className="text-sm text-gray-600">{it.date}</div>
-                  <div className="text-lg font-semibold">{it.exercise}</div>
-                  <div className="mt-1 text-sm">
-                    {it.sets} Sätze × {it.reps} Wdh — <span className="font-medium">{it.weightKg} kg</span>
+                  <div className="text-xs text-white/40">{it.date}</div>
+                  <div className="text-base font-semibold text-white mt-0.5">{it.exercise}</div>
+                  <div className="mt-1.5 flex gap-2">
+                    <span className="rounded-lg bg-white/[0.06] px-2 py-0.5 text-xs text-white/70">{it.sets} Sätze</span>
+                    <span className="rounded-lg bg-white/[0.06] px-2 py-0.5 text-xs text-white/70">{it.reps} Wdh</span>
+                    <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-300 font-medium">{it.weightKg} kg</span>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => openEdit(it)}
-                    className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-100"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/70 transition active:bg-white/10"
                   >
                     Bearbeiten
                   </button>
                   <button
                     onClick={() => onDelete(it.id)}
-                    className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-100"
+                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition active:bg-red-500/20"
                   >
                     Löschen
                   </button>
@@ -144,22 +150,22 @@ export default function TrainingsPage() {
         <div className="grid gap-3">
           <FormField label="Datum" value={date} onChange={setDate} type="date" />
           <FormField label="Übung" value={exercise} onChange={setExercise} placeholder="z.B. Bankdrücken" />
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             <FormField label="Sätze" value={sets} onChange={setSets} type="number" />
             <FormField label="Wdh" value={reps} onChange={setReps} type="number" />
-            <FormField label="Gewicht (kg)" value={weightKg} onChange={setWeightKg} type="number" />
+            <FormField label="kg" value={weightKg} onChange={setWeightKg} type="number" />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex gap-2 mt-2">
             <button
               onClick={() => setOpen(false)}
-              className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-100"
+              className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white/70 transition active:bg-white/10"
             >
               Abbrechen
             </button>
             <button
               onClick={onSave}
-              className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
+              className="flex-1 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition active:scale-95"
             >
               Speichern
             </button>

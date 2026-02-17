@@ -8,8 +8,8 @@ export default function Card({
   return (
     <div
       className={[
-        "rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur",
-        "transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:shadow-lg",
+        "rounded-2xl border border-white/8 bg-white/[0.04] p-4 backdrop-blur-sm",
+        "transition-colors active:bg-white/[0.08]",
         className,
       ].join(" ")}
     >
