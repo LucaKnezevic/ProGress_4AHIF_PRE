@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
 export default function Modal({
   open,
   title,
@@ -9,11 +14,17 @@ export default function Modal({
   children: React.ReactNode;
   onClose: () => void;
 }) {
-  if (!open) return null;
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[430px] rounded-t-3xl border-t border-white/10 bg-[#0f1320] p-5 shadow-2xl animate-[slideUp_0.3s_ease-out]">
+  useEffect(() => {
+    setPortalTarget(document.getElementById("modal-root"));
+  }, []);
+
+  if (!open || !portalTarget) return null;
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
@@ -26,6 +37,7 @@ export default function Modal({
         </div>
         <div className="mt-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }

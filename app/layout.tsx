@@ -17,16 +17,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <div className="phone-frame">
-          {/* Background Effects */}
-          <div className="pointer-events-none fixed inset-0 overflow-hidden">
-            <div className="absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-indigo-600/20 blur-[100px]" />
-            <div className="absolute bottom-20 right-[-80px] h-[300px] w-[300px] rounded-full bg-cyan-500/10 blur-[100px]" />
+          {/* iPhone X Notch */}
+          <div className="phone-notch" />
+
+          {/* Ambient glow effects */}
+          <div className="phone-glow" />
+
+          {/* Scrollable page content */}
+          <div className="phone-content">
+            {children}
           </div>
 
-          <main className="relative min-h-screen pb-24">
-            {children}
-          </main>
+          {/* Modal portal target — inside phone, outside scrollable content */}
+          <div id="modal-root" />
 
+          {/* Bottom navigation — sticky to bottom */}
           <BottomTabBar />
         </div>
       </body>
