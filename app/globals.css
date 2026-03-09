@@ -33,16 +33,25 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Desktop background (sketchbook) */
-  background: #f5f5f5;
-  background-image:
-    linear-gradient(rgba(180, 195, 220, 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 195, 220, 0.35) 1px, transparent 1px);
-  background-size: 24px 24px;
+  /* Dark base fallback */
+  background: #0a0a0a;
 
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Flipped background image behind the phone */
+body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/wooden-texture_1208-334.png') center/cover no-repeat;
+  transform: rotate(180deg);
+  filter: brightness(0.5);
+  z-index: 0;
 }
 
 /* ============================================
@@ -50,6 +59,7 @@ body {
    ============================================ */
 .phone-frame {
   position: relative;
+  z-index: 1;
   width: var(--phone-width);
   height: 100vh;
   max-height: 100vh;

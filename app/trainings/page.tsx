@@ -5,16 +5,47 @@ import SectionTitle from "@/components/SectionTitle";
 import Card from "@/components/Card";
 import Modal from "@/components/Modal";
 import FormField from "@/components/FormField";
-import { load, save, uid } from "@/lib/storage";
 import type { TrainingEntry } from "@/types/models";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
-const KEY = "progress_trainings";
+const API = "/api/trainings";
+
+type Filter = "heute" | "woche" | "monat" | "gesamt";
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "heute", label: "Heute" },
+  { key: "woche", label: "Woche" },
+  { key: "monat", label: "Monat" },
+  { key: "gesamt", label: "Gesamt" },
+];
+
+function startOfWeek(d: Date): Date {
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  mon.setHours(0, 0, 0, 0);
+  return mon;
+}
+
+function filterByRange(items: TrainingEntry[], filter: Filter): TrainingEntry[] {
+  if (filter === "gesamt") return items;
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  if (filter === "heute") return items.filter((i) => i.date === todayStr);
+  if (filter === "woche") {
+    const ws = startOfWeek(now).toISOString().slice(0, 10);
+    return items.filter((i) => i.date >= ws && i.date <= todayStr);
+  }
+  const ms = todayStr.slice(0, 7) + "-01";
+  return items.filter((i) => i.date >= ms && i.date <= todayStr);
+}
 
 export default function TrainingsPage() {
-  const [items, setItems] = useState<TrainingEntry[]>([]);
+  const [allItems, setAllItems] = useState<TrainingEntry[]>([]);
+  const [filter, setFilter] = useState<Filter>("gesamt");
   const [open, setOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
 
   // Form state
   const [date, setDate] = useState("");
@@ -23,16 +54,34 @@ export default function TrainingsPage() {
   const [reps, setReps] = useState("10");
   const [weightKg, setWeightKg] = useState("0");
 
-  useEffect(() => {
-    setItems(load<TrainingEntry[]>(KEY, []));
+  const fetchItems = useCallback(async () => {
+    try {
+      const res = await fetch(API);
+      if (res.ok) setAllItems(await res.json());
+    } catch { /* backend not reachable */ }
   }, []);
 
   useEffect(() => {
-    save(KEY, items);
-  }, [items]);
+    fetchItems();
+  }, [fetchItems]);
 
-  const sorted = useMemo(() => {
-    return [...items].sort((a, b) => b.date.localeCompare(a.date));
+  // filtered items
+  const items = useMemo(
+    () => filterByRange(allItems, filter),
+    [allItems, filter]
+  );
+
+  // totals
+  const totals = useMemo(() => {
+    return items.reduce(
+      (acc, it) => ({
+        exercises: acc.exercises + 1,
+        sets: acc.sets + it.sets,
+        reps: acc.reps + it.reps,
+        volume: acc.volume + it.sets * it.reps * it.weightKg,
+      }),
+      { exercises: 0, sets: 0, reps: 0, volume: 0 }
+    );
   }, [items]);
 
   function resetForm() {
@@ -55,91 +104,144 @@ export default function TrainingsPage() {
     setSets(String(it.sets));
     setReps(String(it.reps));
     setWeightKg(String(it.weightKg));
-    setEditId(it.id);
+    setEditId(it.id ?? null);
     setOpen(true);
   }
 
-  function onSave() {
+  async function onSave() {
     if (!date || !exercise) return;
 
-    const entry: TrainingEntry = {
-      id: editId ?? uid(),
-      date,
-      exercise,
-      sets: Number(sets),
-      reps: Number(reps),
-      weightKg: Number(weightKg),
-    };
+    const body = { date, exercise, sets: Number(sets), reps: Number(reps), weightKg: Number(weightKg) };
 
-    setItems((prev) => {
-      const exists = prev.some((p) => p.id === entry.id);
-      return exists ? prev.map((p) => (p.id === entry.id ? entry : p)) : [entry, ...prev];
-    });
+    try {
+      if (editId != null) {
+        await fetch(`${API}/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } else {
+        await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      }
+      await fetchItems();
+    } catch { /* backend not reachable */ }
 
     setOpen(false);
     resetForm();
   }
 
-  function onDelete(id: string) {
-    setItems((prev) => prev.filter((p) => p.id !== id));
+  async function onDelete(id: number | undefined) {
+    if (id == null) return;
+    try {
+      await fetch(`${API}/${id}`, { method: "DELETE" });
+      await fetchItems();
+    } catch { /* backend not reachable */ }
   }
 
   return (
     <Container>
-      <div className="flex items-center justify-between gap-3">
-        <SectionTitle
-          title="Trainingsdaten"
-          subtitle="Übungen erfassen & verwalten"
-        />
-        <button
-          onClick={openCreate}
-          className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition active:scale-95"
-        >
-          + Neu
-        </button>
-      </div>
+      <div className="grid gap-5">
+        <SectionTitle title="Trainingsdaten" subtitle="Übungen erfassen & verwalten" />
 
-      <div className="grid gap-3">
-        {sorted.length === 0 ? (
-          <Card>
-            <div className="py-6 text-center">
-              <p className="text-3xl mb-2">🏋️</p>
-              <p className="text-sm text-white/50">Noch keine Trainingsdaten vorhanden.</p>
-              <p className="text-xs text-white/30 mt-1">Tippe auf &quot;+ Neu&quot; um zu starten</p>
+        {/* Filter Navbar */}
+        <div className="flex gap-2 rounded-xl bg-white/[0.04] p-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium transition ${
+                filter === f.key
+                  ? "bg-indigo-500 text-white shadow"
+                  : "text-white/50 hover:text-white/70"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Daily summary */}
+        <Card>
+          <div className="text-center py-2">
+            <div className="text-3xl font-bold text-white">{totals.exercises}</div>
+            <div className="text-xs text-white/40 mt-0.5">Übungen Gesamt</div>
+            <div className="flex justify-center gap-4 mt-3">
+              <div className="text-center">
+                <div className="text-sm font-semibold text-indigo-300">{totals.sets}</div>
+                <div className="text-[10px] text-white/40">Sätze</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-emerald-300">{totals.reps}</div>
+                <div className="text-[10px] text-white/40">Wdh</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-amber-300">{Math.round(totals.volume)}</div>
+                <div className="text-[10px] text-white/40">Volumen (kg)</div>
+              </div>
             </div>
-          </Card>
-        ) : (
-          sorted.map((it) => (
-            <Card key={it.id}>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <div className="text-xs text-white/40">{it.date}</div>
-                  <div className="text-base font-semibold text-white mt-0.5">{it.exercise}</div>
-                  <div className="mt-1.5 flex gap-2">
-                    <span className="rounded-lg bg-white/[0.06] px-2 py-0.5 text-xs text-white/70">{it.sets} Sätze</span>
-                    <span className="rounded-lg bg-white/[0.06] px-2 py-0.5 text-xs text-white/70">{it.reps} Wdh</span>
-                    <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-300 font-medium">{it.weightKg} kg</span>
+          </div>
+        </Card>
+
+        {/* Exercises card */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏋️</span>
+              <div>
+                <div className="text-sm font-semibold text-white">Übungen</div>
+                {items.length > 0 && (
+                  <div className="text-xs text-white/40">{items.length} Einträge</div>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={openCreate}
+              className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.06] flex items-center justify-center text-white/60 text-2xl transition active:bg-white/10"
+            >
+              +
+            </button>
+          </div>
+
+          {items.length > 0 ? (
+            <div className="mt-3 border-t border-white/[0.06] pt-2 grid gap-1.5">
+              {items.map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between py-1.5 group cursor-pointer"
+                  onClick={() => openEdit(it)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white truncate">{it.exercise}</div>
+                    <div className="text-[10px] text-white/30">
+                      {it.sets} Sätze · {it.reps} Wdh · {it.weightKg} kg
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className="text-xs text-indigo-300 font-medium">{Math.round(it.sets * it.reps * it.weightKg)} kg</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(it.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-red-400/60 text-xs transition"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openEdit(it)}
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/70 transition active:bg-white/10"
-                  >
-                    Bearbeiten
-                  </button>
-                  <button
-                    onClick={() => onDelete(it.id)}
-                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition active:bg-red-500/20"
-                  >
-                    Löschen
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 border-t border-white/[0.06] pt-4 pb-2 text-center">
+              <p className="text-sm text-white/50">Noch keine Übungen für diesen Tag.</p>
+              <p className="text-xs text-white/30 mt-1">Tippe auf + um zu starten</p>
+            </div>
+          )}
+        </Card>
       </div>
 
       <Modal

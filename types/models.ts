@@ -1,5 +1,5 @@
 export type TrainingEntry = {
-  id: string;
+  id?: number;
   date: string; // YYYY-MM-DD
   exercise: string;
   sets: number;

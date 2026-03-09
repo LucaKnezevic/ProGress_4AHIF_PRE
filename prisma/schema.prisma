@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TrainingEntry {
+  id       Int      @id @default(autoincrement())
+  date     String
+  exercise String
+  sets     Int
+  reps     Int
+  weightKg Float
+}
+
+model MealEntry {
+  id       Int    @id @default(autoincrement())
+  date     String // YYYY-MM-DD
+  meal     String // fruehstueck | mittagessen | abendessen | snacks
+  name     String
+  kcal     Float
+  protein  Float  @default(0)
+  carbs    Float  @default(0)
+  fat      Float  @default(0)
+}
